@@ -3,22 +3,23 @@ import { useParams } from "react-router-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { FileText, Loader2 } from "lucide-react"
+import { AlertTriangle, FileText, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { api } from "@/api/axios"
 import {
-  cerrarNomina,
-  generarNomina,
-  getNomina,
-  listNominas,
-} from "@/api/nomina"
-import type { Nomina as NominaModel } from "@/types/nomina"
+  closePayroll,
+  generatePayroll,
+  getPayroll,
+  listPayrolls,
+} from "@/api/payroll"
+import type { Payroll, PayrollStatus } from "@/types/payroll"
 import { downloadPDF, formatCOP } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import {
   Card,
   CardContent,
@@ -54,8 +55,8 @@ async function handleDownload(url: string, filename: string) {
   }
 }
 
-function EstadoBadge({ estado }: { estado: NominaModel["estado"] }) {
-  if (estado === "cerrada") {
+function StatusBadge({ status }: { status: PayrollStatus }) {
+  if (status === "closed") {
     return <Badge className="bg-green-600 hover:bg-green-600">Cerrada</Badge>
   }
   return (
@@ -65,40 +66,73 @@ function EstadoBadge({ estado }: { estado: NominaModel["estado"] }) {
   )
 }
 
-function DetalleTable({
-  nomina,
+// Muestra "—" cuando el valor es 0 para no saturar la tabla.
+// Los montos pueden llegar como strings desde el backend; se parsean con Number().
+const fmtOpt = (val: number | string) =>
+  Number(val) > 0 ? formatCOP(Number(val)) : "—"
+
+function DetailTable({
+  payroll,
   empresaId,
   withDesprendible = false,
 }: {
-  nomina: NominaModel
+  payroll: Payroll
   empresaId?: string
   withDesprendible?: boolean
 }) {
+  const details = payroll.details ?? []
+  const totalEarned = details.reduce((s, d) => s + Number(d.total_earned), 0)
+  const totalDeductions = details.reduce(
+    (s, d) => s + Number(d.total_deductions),
+    0
+  )
+  const totalNet = details.reduce((s, d) => s + Number(d.net_pay), 0)
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Empleado</TableHead>
+          <TableHead className="text-right">Salario Base</TableHead>
+          <TableHead className="text-right">Aux. Transp.</TableHead>
+          <TableHead className="text-right">H. Extra</TableHead>
+          <TableHead className="text-right">Bonif.</TableHead>
+          <TableHead className="text-right">Desc. Adic.</TableHead>
           <TableHead className="text-right">Devengado</TableHead>
           <TableHead className="text-right">Deducciones</TableHead>
-          <TableHead className="text-right">Neto</TableHead>
+          <TableHead className="text-right font-bold">Neto</TableHead>
           {withDesprendible && (
             <TableHead className="text-right">Acciones</TableHead>
           )}
         </TableRow>
       </TableHeader>
       <TableBody>
-        {(nomina.detalles ?? []).map((d) => (
-          <TableRow key={d.id ?? d.empleado_id}>
-            <TableCell>{d.empleado_nombre}</TableCell>
+        {details.map((d) => (
+          <TableRow key={d.id ?? d.employee_id}>
+            <TableCell>{d.employee_name}</TableCell>
             <TableCell className="text-right">
-              {formatCOP(d.total_devengado)}
+              {formatCOP(Number(d.base_salary))}
             </TableCell>
             <TableCell className="text-right">
-              {formatCOP(d.total_deducciones)}
+              {fmtOpt(d.transport_allowance)}
             </TableCell>
-            <TableCell className="text-right font-medium">
-              {formatCOP(d.neto)}
+            <TableCell className="text-right">
+              {fmtOpt(d.overtime_value)}
+            </TableCell>
+            <TableCell className="text-right">
+              {fmtOpt(d.total_bonuses)}
+            </TableCell>
+            <TableCell className="text-right">
+              {fmtOpt(d.total_additional_deductions)}
+            </TableCell>
+            <TableCell className="text-right">
+              {formatCOP(Number(d.total_earned))}
+            </TableCell>
+            <TableCell className="text-right">
+              {formatCOP(Number(d.total_deductions))}
+            </TableCell>
+            <TableCell className="text-right font-bold">
+              {formatCOP(Number(d.net_pay))}
             </TableCell>
             {withDesprendible && (
               <TableCell className="text-right">
@@ -107,8 +141,8 @@ function DetalleTable({
                   size="sm"
                   onClick={() =>
                     handleDownload(
-                      `${api.defaults.baseURL}/empresas/${empresaId}/nomina/${nomina.id}/empleados/${d.empleado_id}/desprendible`,
-                      `desprendible-${d.empleado_nombre.replace(/\s+/g, "_")}.pdf`
+                      `${api.defaults.baseURL}/empresas/${empresaId}/nomina/${payroll.id}/empleados/${d.employee_id}/desprendible`,
+                      `desprendible-${d.employee_name.replace(/\s+/g, "_")}.pdf`
                     )
                   }
                 >
@@ -118,6 +152,26 @@ function DetalleTable({
             )}
           </TableRow>
         ))}
+        {details.length > 0 && (
+          <TableRow className="bg-gray-50 font-bold border-t-2">
+            <TableCell>TOTALES</TableCell>
+            <TableCell />
+            <TableCell />
+            <TableCell />
+            <TableCell />
+            <TableCell />
+            <TableCell className="text-right font-bold">
+              {formatCOP(totalEarned)}
+            </TableCell>
+            <TableCell className="text-right font-bold">
+              {formatCOP(totalDeductions)}
+            </TableCell>
+            <TableCell className="text-right font-bold">
+              {formatCOP(totalNet)}
+            </TableCell>
+            {withDesprendible && <TableCell />}
+          </TableRow>
+        )}
       </TableBody>
     </Table>
   )
@@ -130,40 +184,42 @@ export default function Nomina() {
   const [periodoInicio, setPeriodoInicio] = useState("")
   const [periodoFin, setPeriodoFin] = useState("")
 
-  const [preview, setPreview] = useState<NominaModel | null>(null)
+  const [preview, setPreview] = useState<Payroll | null>(null)
   const [detalleId, setDetalleId] = useState<string | null>(null)
-  const [cerrarTarget, setCerrarTarget] = useState<NominaModel | null>(null)
+  const [cerrarTarget, setCerrarTarget] = useState<Payroll | null>(null)
+  const [warnings, setWarnings] = useState<string[]>([])
 
-  const { data: nominas, isLoading } = useQuery({
-    queryKey: ["nominas", empresaId],
-    queryFn: () => listNominas(empresaId!),
+  const { data: payrolls, isLoading } = useQuery({
+    queryKey: ["payrolls", empresaId],
+    queryFn: () => listPayrolls(empresaId!),
     enabled: !!empresaId,
   })
 
   const { data: detalle } = useQuery({
-    queryKey: ["nomina", empresaId, detalleId],
-    queryFn: () => getNomina(empresaId!, detalleId!),
+    queryKey: ["payroll", empresaId, detalleId],
+    queryFn: () => getPayroll(empresaId!, detalleId!),
     enabled: !!empresaId && !!detalleId,
   })
 
   const generarMutation = useMutation({
     mutationFn: () =>
-      generarNomina(empresaId!, {
-        periodo_inicio: periodoInicio,
-        periodo_fin: periodoFin,
+      generatePayroll(empresaId!, {
+        period_start: periodoInicio,
+        period_end: periodoFin,
       }),
-    onSuccess: (nomina) => {
-      queryClient.invalidateQueries({ queryKey: ["nominas", empresaId] })
-      setPreview(nomina)
+    onSuccess: (payroll) => {
+      queryClient.invalidateQueries({ queryKey: ["payrolls", empresaId] })
+      setPreview(payroll)
     },
     onError: () => toast.error("No se pudo generar la nómina"),
   })
 
   const cerrarMutation = useMutation({
-    mutationFn: (nominaId: string) => cerrarNomina(empresaId!, nominaId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["nominas", empresaId] })
+    mutationFn: (payrollId: string) => closePayroll(empresaId!, payrollId),
+    onSuccess: ({ warnings }) => {
+      queryClient.invalidateQueries({ queryKey: ["payrolls", empresaId] })
       setCerrarTarget(null)
+      setWarnings(warnings)
       toast.success("Nómina cerrada")
     },
     onError: () => toast.error("No se pudo cerrar la nómina"),
@@ -226,7 +282,7 @@ export default function Nomina() {
             <p className="py-6 text-center text-sm text-muted-foreground">
               Cargando…
             </p>
-          ) : !nominas || nominas.length === 0 ? (
+          ) : !payrolls || payrolls.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               No hay nóminas registradas.
             </p>
@@ -235,7 +291,6 @@ export default function Nomina() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Período</TableHead>
-                  <TableHead className="text-right">Empleados</TableHead>
                   <TableHead className="text-right">Total Devengado</TableHead>
                   <TableHead className="text-right">Total Neto</TableHead>
                   <TableHead>Estado</TableHead>
@@ -243,29 +298,26 @@ export default function Nomina() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {nominas.map((n) => (
-                  <TableRow key={n.id}>
+                {payrolls.map((p) => (
+                  <TableRow key={p.id}>
                     <TableCell>
-                      {fmtDate(n.periodo_inicio)} – {fmtDate(n.periodo_fin)}
+                      {fmtDate(p.period_start)} – {fmtDate(p.period_end)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {n.empleados_procesados}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCOP(n.total_devengado)}
+                      {formatCOP(p.total_earned)}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {formatCOP(n.total_neto)}
+                      {formatCOP(p.total_net)}
                     </TableCell>
                     <TableCell>
-                      <EstadoBadge estado={n.estado} />
+                      <StatusBadge status={p.status} />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setDetalleId(n.id)}
+                          onClick={() => setDetalleId(p.id)}
                         >
                           Ver detalle
                         </Button>
@@ -274,19 +326,16 @@ export default function Nomina() {
                           size="sm"
                           onClick={() =>
                             handleDownload(
-                              `${api.defaults.baseURL}/empresas/${empresaId}/nomina/${n.id}/pdf`,
-                              `nomina-${n.periodo_inicio}_${n.periodo_fin}.pdf`
+                              `${api.defaults.baseURL}/empresas/${empresaId}/nomina/${p.id}/pdf`,
+                              `nomina-${p.period_start}_${p.period_end}.pdf`
                             )
                           }
                         >
                           <FileText className="size-4" />
                           Nómina PDF
                         </Button>
-                        {n.estado === "borrador" && (
-                          <Button
-                            size="sm"
-                            onClick={() => setCerrarTarget(n)}
-                          >
+                        {p.status === "draft" && (
+                          <Button size="sm" onClick={() => setCerrarTarget(p)}>
                             Cerrar Nómina
                           </Button>
                         )}
@@ -300,22 +349,40 @@ export default function Nomina() {
         </CardContent>
       </Card>
 
+      {/* Advertencias al cerrar nómina */}
+      {warnings.length > 0 && (
+        <Alert variant="warning" className="mt-4">
+          <AlertTriangle />
+          <AlertTitle>Advertencias al cerrar nómina</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc pl-4">
+              {warnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Preview tras generar */}
       <Dialog
         open={!!preview}
         onOpenChange={(open) => !open && setPreview(null)}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent
+          className="max-h-[90vh] overflow-auto"
+          style={{ maxWidth: "95vw", width: "95vw" }}
+        >
           <DialogHeader>
             <DialogTitle>Vista previa de la nómina</DialogTitle>
             <DialogDescription>
               {preview &&
-                `${fmtDate(preview.periodo_inicio)} – ${fmtDate(
-                  preview.periodo_fin
-                )} · ${preview.empleados_procesados} empleados`}
+                `${fmtDate(preview.period_start)} – ${fmtDate(
+                  preview.period_end
+                )} · ${preview.details?.length ?? 0} empleados`}
             </DialogDescription>
           </DialogHeader>
-          {preview && <DetalleTable nomina={preview} />}
+          {preview && <DetailTable payroll={preview} />}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPreview(null)}>
               Cerrar sin guardar
@@ -330,19 +397,22 @@ export default function Nomina() {
         open={!!detalleId}
         onOpenChange={(open) => !open && setDetalleId(null)}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent
+          className="max-h-[90vh] overflow-auto"
+          style={{ maxWidth: "95vw", width: "95vw" }}
+        >
           <DialogHeader>
             <DialogTitle>Detalle de la nómina</DialogTitle>
             <DialogDescription>
               {detalle &&
-                `${fmtDate(detalle.periodo_inicio)} – ${fmtDate(
-                  detalle.periodo_fin
+                `${fmtDate(detalle.period_start)} – ${fmtDate(
+                  detalle.period_end
                 )}`}
             </DialogDescription>
           </DialogHeader>
           {detalle ? (
-            <DetalleTable
-              nomina={detalle}
+            <DetailTable
+              payroll={detalle}
               empresaId={empresaId}
               withDesprendible
             />
@@ -365,9 +435,9 @@ export default function Nomina() {
             <DialogDescription>
               {cerrarTarget &&
                 `¿Confirmas cerrar la nómina del período ${fmtDate(
-                  cerrarTarget.periodo_inicio
+                  cerrarTarget.period_start
                 )} – ${fmtDate(
-                  cerrarTarget.periodo_fin
+                  cerrarTarget.period_end
                 )}? Esta acción no se puede deshacer.`}
             </DialogDescription>
           </DialogHeader>

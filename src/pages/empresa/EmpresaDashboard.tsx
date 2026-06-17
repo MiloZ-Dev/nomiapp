@@ -5,10 +5,10 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { FileText, Users, Wallet } from "lucide-react"
 
-import { listEmpleados } from "@/api/empleados"
-import { listNominas } from "@/api/nomina"
+import { listEmployees } from "@/api/employees"
+import { listPayrolls } from "@/api/payroll"
 import { formatCOP } from "@/lib/utils"
-import type { Nomina } from "@/types/nomina"
+import type { PayrollStatus } from "@/types/payroll"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -30,8 +30,8 @@ function fmtDate(value: string) {
   return format(new Date(value), "dd MMM yyyy", { locale: es })
 }
 
-function EstadoBadge({ estado }: { estado: Nomina["estado"] }) {
-  if (estado === "cerrada") {
+function StatusBadge({ status }: { status: PayrollStatus }) {
+  if (status === "closed") {
     return <Badge className="bg-green-600 hover:bg-green-600">Cerrada</Badge>
   }
   return (
@@ -46,33 +46,33 @@ export default function EmpresaDashboard() {
   const navigate = useNavigate()
   const base = `/empresa/${empresaId}`
 
-  const { data: empleados } = useQuery({
-    queryKey: ["empleados", empresaId],
-    queryFn: () => listEmpleados(empresaId!),
+  const { data: employees } = useQuery({
+    queryKey: ["employees", empresaId],
+    queryFn: () => listEmployees(empresaId!),
     enabled: !!empresaId,
   })
 
-  const { data: nominas } = useQuery({
-    queryKey: ["nominas", empresaId],
-    queryFn: () => listNominas(empresaId!),
+  const { data: payrolls } = useQuery({
+    queryKey: ["payrolls", empresaId],
+    queryFn: () => listPayrolls(empresaId!),
     enabled: !!empresaId,
   })
 
-  const empleadosActivos = useMemo(
-    () => (empleados ?? []).filter((e) => e.activo).length,
-    [empleados]
+  const activeEmployees = useMemo(
+    () => (employees ?? []).filter((e) => e.active).length,
+    [employees]
   )
 
-  const nominasOrdenadas = useMemo(
+  const sortedPayrolls = useMemo(
     () =>
-      [...(nominas ?? [])].sort(
+      [...(payrolls ?? [])].sort(
         (a, b) =>
-          new Date(b.periodo_fin).getTime() - new Date(a.periodo_fin).getTime()
+          new Date(b.period_end).getTime() - new Date(a.period_end).getTime()
       ),
-    [nominas]
+    [payrolls]
   )
 
-  const ultimaNomina = nominasOrdenadas[0]
+  const lastPayroll = sortedPayrolls[0]
 
   return (
     <div className="space-y-6">
@@ -91,17 +91,17 @@ export default function EmpresaDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Empleados Activos"
-          value={String(empleadosActivos)}
+          value={String(activeEmployees)}
           icon={Users}
         />
         <StatCard
           label="Última Nómina"
-          value={ultimaNomina ? fmtDate(ultimaNomina.periodo_fin) : "Sin nóminas"}
+          value={lastPayroll ? fmtDate(lastPayroll.period_end) : "Sin nóminas"}
           icon={FileText}
         />
         <StatCard
           label="Costo Último Mes"
-          value={ultimaNomina ? formatCOP(ultimaNomina.total_neto) : "—"}
+          value={lastPayroll ? formatCOP(lastPayroll.total_net) : "—"}
           icon={Wallet}
         />
       </div>
@@ -111,7 +111,7 @@ export default function EmpresaDashboard() {
           <CardTitle className="text-base">Nóminas Recientes</CardTitle>
         </CardHeader>
         <CardContent>
-          {nominasOrdenadas.length === 0 ? (
+          {sortedPayrolls.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               No hay nóminas registradas.
             </p>
@@ -127,22 +127,22 @@ export default function EmpresaDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {nominasOrdenadas.slice(0, 5).map((n) => (
-                  <TableRow key={n.id}>
+                {sortedPayrolls.slice(0, 5).map((p) => (
+                  <TableRow key={p.id}>
                     <TableCell>
-                      {fmtDate(n.periodo_inicio)} – {fmtDate(n.periodo_fin)}
+                      {fmtDate(p.period_start)} – {fmtDate(p.period_end)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCOP(n.total_devengado)}
+                      {formatCOP(p.total_earned)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCOP(n.total_deducciones)}
+                      {formatCOP(p.total_deductions)}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {formatCOP(n.total_neto)}
+                      {formatCOP(p.total_net)}
                     </TableCell>
                     <TableCell>
-                      <EstadoBadge estado={n.estado} />
+                      <StatusBadge status={p.status} />
                     </TableCell>
                   </TableRow>
                 ))}

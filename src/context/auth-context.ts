@@ -15,8 +15,8 @@ export const AuthContext = createContext<AuthContextValue | null>(null)
 
 /** Where a user should land after logging in / hitting the app root. */
 export function getHomePathForUser(user: User): string {
-  if (user.rol === "admin_empresa" && user.empresa_id) {
-    return `/empresa/${user.empresa_id}`
+  if (user.role === "company_admin" && user.company_id) {
+    return `/empresa/${user.company_id}`
   }
   return "/dashboard"
 }

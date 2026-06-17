@@ -12,6 +12,7 @@ const EmpresaLayout = lazy(() => import("@/pages/empresa/EmpresaLayout"))
 const EmpresaDashboard = lazy(() => import("@/pages/empresa/EmpresaDashboard"))
 const Empleados = lazy(() => import("@/pages/empresa/Empleados"))
 const EmpleadoForm = lazy(() => import("@/pages/empresa/EmpleadoForm"))
+const Incidentes = lazy(() => import("@/pages/empresa/Incidentes"))
 const NominaPage = lazy(() => import("@/pages/empresa/Nomina"))
 
 function PageFallback() {
@@ -42,7 +43,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "/", element: <RootRedirect /> },
       {
-        element: <ProtectedRoute requiredRol="super_admin" />,
+        element: <ProtectedRoute requiredRole="super_admin" />,
         children: [
           { path: "/dashboard", element: withSuspense(<DashboardPage />) },
         ],
@@ -57,6 +58,10 @@ export const router = createBrowserRouter([
           {
             path: "empleados/:empleadoId/edit",
             element: withSuspense(<EmpleadoForm />),
+          },
+          {
+            path: "empleados/:empleadoId/novedades",
+            element: withSuspense(<Incidentes />),
           },
           { path: "nomina", element: withSuspense(<NominaPage />) },
         ],

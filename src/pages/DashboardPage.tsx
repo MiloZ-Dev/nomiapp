@@ -8,8 +8,8 @@ import { Building2, Copy, Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
 
 import { AppLayout } from "@/components/layout/AppLayout"
-import { createEmpresa, listEmpresas } from "@/api/empresas"
-import type { Empresa, EmpresaCredenciales } from "@/types/empresa"
+import { createCompany, listCompanies } from "@/api/companies"
+import type { Company, CompanyCredentials } from "@/types/company"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
@@ -39,39 +39,39 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 
-const empresaSchema = z.object({
-  nombre: z.string().min(1, "El nombre es requerido"),
+const companySchema = z.object({
+  name: z.string().min(1, "El nombre es requerido"),
   nit: z
     .string()
     .min(1, "El NIT es requerido")
     .regex(/^[0-9-]+$/, "El NIT solo admite números y guión"),
-  ciudad: z.string().min(1, "La ciudad es requerida"),
-  direccion: z.string().optional(),
-  telefono: z.string().optional(),
+  city: z.string().optional(),
+  address: z.string().optional(),
+  phone: z.string().optional(),
 })
 
-type EmpresaValues = z.infer<typeof empresaSchema>
+type CompanyValues = z.infer<typeof companySchema>
 
 export default function DashboardPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
-  const [credenciales, setCredenciales] = useState<EmpresaCredenciales | null>(
+  const [credenciales, setCredenciales] = useState<CompanyCredentials | null>(
     null
   )
 
-  const { data: empresas, isLoading } = useQuery({
-    queryKey: ["empresas"],
-    queryFn: listEmpresas,
+  const { data: companies, isLoading } = useQuery({
+    queryKey: ["companies"],
+    queryFn: listCompanies,
   })
 
-  const form = useForm<EmpresaValues>({
-    resolver: zodResolver(empresaSchema),
-    defaultValues: { nombre: "", nit: "", ciudad: "", direccion: "", telefono: "" },
+  const form = useForm<CompanyValues>({
+    resolver: zodResolver(companySchema),
+    defaultValues: { name: "", nit: "", city: "", address: "", phone: "" },
   })
 
   const createMutation = useMutation({
-    mutationFn: createEmpresa,
+    mutationFn: createCompany,
     onSuccess: (result) => {
       // Close the form dialog and surface the one-time credentials instead.
       setOpen(false)
@@ -81,14 +81,14 @@ export default function DashboardPage() {
     onError: () => toast.error("No se pudo crear la empresa"),
   })
 
-  function onSubmit(values: EmpresaValues) {
+  function onSubmit(values: CompanyValues) {
     createMutation.mutate(values)
   }
 
   // Refresh the list only once the admin has dismissed the credentials dialog.
   function closeCredenciales() {
     setCredenciales(null)
-    queryClient.invalidateQueries({ queryKey: ["empresas"] })
+    queryClient.invalidateQueries({ queryKey: ["companies"] })
   }
 
   return (
@@ -126,7 +126,7 @@ export default function DashboardPage() {
                 >
                   <FormField
                     control={form.control}
-                    name="nombre"
+                    name="name"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Nombre *</FormLabel>
@@ -152,10 +152,10 @@ export default function DashboardPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="ciudad"
+                    name="city"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Ciudad *</FormLabel>
+                        <FormLabel>Ciudad</FormLabel>
                         <FormControl>
                           <Input placeholder="Bogotá" {...field} />
                         </FormControl>
@@ -165,7 +165,7 @@ export default function DashboardPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="direccion"
+                    name="address"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Dirección</FormLabel>
@@ -178,7 +178,7 @@ export default function DashboardPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="telefono"
+                    name="phone"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Teléfono</FormLabel>
@@ -213,15 +213,15 @@ export default function DashboardPage() {
               <Skeleton key={i} className="h-36 w-full rounded-xl" />
             ))}
           </div>
-        ) : !empresas || empresas.length === 0 ? (
+        ) : !companies || companies.length === 0 ? (
           <EmptyState onCreate={() => setOpen(true)} />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {empresas.map((empresa) => (
-              <EmpresaCard
-                key={empresa.id}
-                empresa={empresa}
-                onClick={() => navigate(`/empresa/${empresa.id}`)}
+            {companies.map((company) => (
+              <CompanyCard
+                key={company.id}
+                company={company}
+                onClick={() => navigate(`/empresa/${company.id}`)}
               />
             ))}
           </div>
@@ -292,11 +292,11 @@ function CredencialField({ label, value }: { label: string; value: string }) {
   )
 }
 
-function EmpresaCard({
-  empresa,
+function CompanyCard({
+  company,
   onClick,
 }: {
-  empresa: Empresa
+  company: Company
   onClick: () => void
 }) {
   return (
@@ -306,8 +306,21 @@ function EmpresaCard({
     >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg">{empresa.nombre}</CardTitle>
-          {empresa.activo ? (
+          <div className="flex items-center gap-3">
+            {company.logo_url ? (
+              <img
+                src={company.logo_url}
+                alt={company.name}
+                className="size-10 shrink-0 rounded-md object-cover"
+              />
+            ) : (
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary text-lg font-semibold text-primary-foreground">
+                {company.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <CardTitle className="text-lg">{company.name}</CardTitle>
+          </div>
+          {company.active ? (
             <Badge className="bg-green-600 hover:bg-green-600">Activo</Badge>
           ) : (
             <Badge variant="secondary">Inactivo</Badge>
@@ -315,8 +328,8 @@ function EmpresaCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-1 text-sm text-muted-foreground">
-        <p>NIT: {empresa.nit}</p>
-        <p>{empresa.ciudad}</p>
+        <p>NIT: {company.nit}</p>
+        {company.city && <p>{company.city}</p>}
       </CardContent>
     </Card>
   )

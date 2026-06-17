@@ -2,7 +2,7 @@ import { NavLink, Outlet, useParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft, FileText, LayoutDashboard, Users } from "lucide-react"
 
-import { getEmpresa } from "@/api/empresas"
+import { getCompany } from "@/api/companies"
 import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -12,11 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 export default function EmpresaLayout() {
   const { empresaId } = useParams<{ empresaId: string }>()
   const { user } = useAuth()
-  const isSuperAdmin = user?.rol === "super_admin"
+  const isSuperAdmin = user?.role === "super_admin"
 
-  const { data: empresa, isLoading } = useQuery({
-    queryKey: ["empresa", empresaId],
-    queryFn: () => getEmpresa(empresaId!),
+  const { data: company, isLoading } = useQuery({
+    queryKey: ["company", empresaId],
+    queryFn: () => getCompany(empresaId!),
     enabled: !!empresaId,
   })
 
@@ -47,9 +47,11 @@ export default function EmpresaLayout() {
           {isLoading ? (
             <Skeleton className="h-6 w-36" />
           ) : (
-            <p className="font-semibold leading-tight">{empresa?.nombre}</p>
+            <p className="font-semibold leading-tight">{company?.name}</p>
           )}
-          <Badge variant="secondary">Super Admin</Badge>
+          <Badge variant="secondary">
+            {isSuperAdmin ? "Super Admin" : "Admin Empresa"}
+          </Badge>
         </div>
 
         <Separator className="my-4" />

@@ -2,9 +2,9 @@ import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { getHomePathForUser } from "@/context/auth-context"
-import type { Rol } from "@/types/auth"
+import type { Role } from "@/types/auth"
 
-export function ProtectedRoute({ requiredRol }: { requiredRol?: Rol }) {
+export function ProtectedRoute({ requiredRole }: { requiredRole?: Role }) {
   const { user, isAuthenticated, isInitializing } = useAuth()
   const location = useLocation()
 
@@ -21,7 +21,7 @@ export function ProtectedRoute({ requiredRol }: { requiredRol?: Rol }) {
   }
 
   // Authenticated but wrong role: send the user to their own home area.
-  if (requiredRol && user.rol !== requiredRol) {
+  if (requiredRole && user.role !== requiredRole) {
     return <Navigate to={getHomePathForUser(user)} replace />
   }
 

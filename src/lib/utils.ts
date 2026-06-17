@@ -6,6 +6,29 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export const CONTRACT_TYPE_LABELS: Record<string, string> = {
+  fixed_term: 'Término Fijo',
+  indefinite: 'Indefinido',
+  work_contract: 'Obra Labor',
+}
+
+export const PAYMENT_FREQUENCY_LABELS: Record<string, string> = {
+  weekly: 'Semanal',
+  biweekly: 'Quincenal',
+  monthly: 'Mensual',
+}
+
+export const PAYROLL_STATUS_LABELS: Record<string, string> = {
+  draft: 'Borrador',
+  closed: 'Cerrada',
+}
+
+export const GENDER_LABELS: Record<string, string> = {
+  M: 'Masculino',
+  F: 'Femenino',
+  Otro: 'Otro',
+}
+
 /** Formats a number as Colombian pesos, e.g. 1750905 -> "$ 1.750.905". */
 export const formatCOP = (valor: number) =>
   new Intl.NumberFormat("es-CO", {

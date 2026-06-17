@@ -38,11 +38,11 @@ export function AppLayout({ children }: { children?: React.ReactNode }) {
             <Button variant="ghost" className="gap-2 px-2">
               <Avatar className="size-7">
                 <AvatarFallback className="text-xs">
-                  {initials(user?.full_name || user?.email || "NA")}
+                  {initials(user?.name || user?.email || "NA")}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden text-sm sm:inline">
-                {user?.full_name || user?.email}
+                {user?.name || user?.email}
               </span>
             </Button>
           </DropdownMenuTrigger>

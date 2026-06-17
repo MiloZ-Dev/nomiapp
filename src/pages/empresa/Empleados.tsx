@@ -1,10 +1,9 @@
 import { useNavigate, useParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { Plus, Users } from "lucide-react"
+import { Bell, Plus, Users } from "lucide-react"
 
-import { listEmpleados } from "@/api/empleados"
-import { TIPO_CONTRATO_LABEL } from "@/types/empleado"
-import { formatCOP } from "@/lib/utils"
+import { listEmployees } from "@/api/employees"
+import { CONTRACT_TYPE_LABELS, formatCOP } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -26,9 +25,9 @@ export default function Empleados() {
   const navigate = useNavigate()
   const base = `/empresa/${empresaId}`
 
-  const { data: empleados, isLoading } = useQuery({
-    queryKey: ["empleados", empresaId],
-    queryFn: () => listEmpleados(empresaId!),
+  const { data: employees, isLoading } = useQuery({
+    queryKey: ["employees", empresaId],
+    queryFn: () => listEmployees(empresaId!),
     enabled: !!empresaId,
   })
 
@@ -50,7 +49,7 @@ export default function Empleados() {
                 <Skeleton key={i} className="h-10 w-full" />
               ))}
             </div>
-          ) : !empleados || empleados.length === 0 ? (
+          ) : !employees || employees.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
               <Users className="size-10 text-muted-foreground" />
               <div>
@@ -69,7 +68,7 @@ export default function Empleados() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre Completo</TableHead>
-                  <TableHead>Cédula</TableHead>
+                  <TableHead>Documento</TableHead>
                   <TableHead>Cargo</TableHead>
                   <TableHead className="text-right">Salario Base</TableHead>
                   <TableHead>Tipo Contrato</TableHead>
@@ -78,25 +77,26 @@ export default function Empleados() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {empleados.map((empleado) => (
-                  <TableRow key={empleado.id}>
+                {employees.map((employee) => (
+                  <TableRow key={employee.id}>
                     <TableCell className="font-medium">
-                      {empleado.nombre} {empleado.apellido}
+                      {employee.first_name} {employee.last_name}
                     </TableCell>
-                    <TableCell>{empleado.cedula}</TableCell>
-                    <TableCell>{empleado.cargo}</TableCell>
+                    <TableCell>{employee.id_number}</TableCell>
+                    <TableCell>{employee.position}</TableCell>
                     <TableCell className="text-right">
-                      {empleado.contrato
-                        ? formatCOP(empleado.contrato.salario_base)
+                      {employee.contract
+                        ? formatCOP(employee.contract.base_salary)
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      {empleado.contrato
-                        ? TIPO_CONTRATO_LABEL[empleado.contrato.tipo]
+                      {employee.contract
+                        ? CONTRACT_TYPE_LABELS[employee.contract.type] ??
+                          employee.contract.type
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      {empleado.activo ? (
+                      {employee.active ? (
                         <Badge className="bg-green-600 hover:bg-green-600">
                           Activo
                         </Badge>
@@ -105,15 +105,29 @@ export default function Empleados() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          navigate(`${base}/empleados/${empleado.id}/edit`)
-                        }
-                      >
-                        Editar
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            navigate(
+                              `${base}/empleados/${employee.id}/novedades`
+                            )
+                          }
+                        >
+                          <Bell className="size-4" />
+                          Novedades
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            navigate(`${base}/empleados/${employee.id}/edit`)
+                          }
+                        >
+                          Editar
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

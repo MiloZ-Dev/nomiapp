@@ -1,0 +1,31 @@
+// Bancos y entidades financieras de Colombia.
+// A futuro pueden agregarse otros países; por ahora solo Colombia.
+
+export const COLOMBIA_BANKS = [
+  "Bancolombia",
+  "Banco de Bogotá",
+  "Davivienda",
+  "BBVA Colombia",
+  "Banco Popular",
+  "Banco de Occidente",
+  "Banco Caja Social",
+  "Banco Agrario",
+  "Banco Falabella",
+  "Banco Pichincha",
+  "Banco Finandina",
+  "Banco Santander",
+  "Banco Colpatria",
+  "Nequi",
+  "Daviplata",
+  "Nu Colombia",
+  "Lulo Bank",
+  "Banco W",
+  "Banco Mundo Mujer",
+  "Bancamía",
+  "Confiar",
+  "Coopcentral",
+  "Iris",
+  "Movii",
+  "Rappipay",
+  "Ualá",
+]
